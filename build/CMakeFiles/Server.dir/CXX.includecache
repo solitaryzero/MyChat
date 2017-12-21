@@ -1,0 +1,40 @@
+#IncludeRegexLine: ^[ 	]*#[ 	]*(include|import)[ 	]*[<"]([^">]+)([">])
+
+#IncludeRegexScan: ^.*$
+
+#IncludeRegexComplain: ^$
+
+#IncludeRegexTransform: 
+
+/home/solitaryzero/Documents/MyChat/MyChat/server/server.cpp
+iostream
+-
+sys/types.h
+-
+sys/socket.h
+-
+netinet/in.h
+-
+arpa/inet.h
+-
+stdio.h
+-
+unistd.h
+-
+memory.h
+-
+string
+-
+server.h
+/home/solitaryzero/Documents/MyChat/MyChat/server/server.h
+
+/home/solitaryzero/Documents/MyChat/MyChat/server/server.h
+
+/home/solitaryzero/Documents/MyChat/MyChat/server/serverTest.cpp
+iostream
+-
+cstdlib
+-
+server.h
+/home/solitaryzero/Documents/MyChat/MyChat/server/server.h
+

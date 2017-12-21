@@ -1,10 +1,15 @@
+#ifndef TCPCHATSOCKET_H
+#define TCPCHATSOCKET_H
+
 class TcpChatSocket{
 private:
     int portNo;
     int maxConn;
 
 public:
-    void initSocket();
+    int initSocket();
     void sendMsg();
     void receiveMsg();
 };
+
+#endif
