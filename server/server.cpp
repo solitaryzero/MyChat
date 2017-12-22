@@ -1,12 +1,3 @@
-#include <iostream>
-#include <sys/types.h>  
-#include <sys/socket.h>  
-#include <netinet/in.h>  
-#include <arpa/inet.h>  
-#include <stdio.h>
-#include <unistd.h>
-#include <memory.h>
-#include <string>
 #include "server.h"
 
 #define BUFSIZE 100
@@ -45,16 +36,21 @@ int Server::startServer(){
     }
 
     printf("accept client %s",inet_ntoa(clientSockAddr.sin_addr));  
-    byteLength = write(clientSocketfd,"Welcome to my server",21);//发送欢迎信息  
+    TcpChatSocket clientSock(clientSocketfd);
+    clientSock.initSocket();
+    string s = "hello world!";
+    clientSock.sendMsg(s);//发送欢迎信息  
     printf("here after send\n");
-    printf("length: %d\n",byteLength);
       
     /*接收客户端的数据并将其发送给客户端--recv返回接收到的字节数，send返回发送的字节数*/  
-    while ((byteLength = read(clientSocketfd, buf, BUFSIZE)) > 0){  
-        buf[byteLength]='\0';  
-        printf("%s\n",buf);
+    binData inData;
+    while (1){  
+        inData = clientSock.recvMsg();
+        if (inData.size() == 0) break;
+        printf("%s\n",inData.data());
+        printf("%d\n",inData.size());
         fflush(stdout);  
-        if(write(clientSocketfd,buf,byteLength)<0)  
+        if(clientSock.sendMsg(inData.data(),inData.size()) > 0)  
         {  
             perror("write error");  
             return 1;  
