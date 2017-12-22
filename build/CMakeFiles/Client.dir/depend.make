@@ -3,7 +3,12 @@
 
 CMakeFiles/Client.dir/client/client.cpp.o: ../client/client.cpp
 CMakeFiles/Client.dir/client/client.cpp.o: ../client/client.h
+CMakeFiles/Client.dir/client/client.cpp.o: ../socket/TcpChatSocket.h
 
 CMakeFiles/Client.dir/client/clientTest.cpp.o: ../client/client.h
 CMakeFiles/Client.dir/client/clientTest.cpp.o: ../client/clientTest.cpp
+CMakeFiles/Client.dir/client/clientTest.cpp.o: ../socket/TcpChatSocket.h
+
+CMakeFiles/Client.dir/socket/TcpChatSocket.cpp.o: ../socket/TcpChatSocket.cpp
+CMakeFiles/Client.dir/socket/TcpChatSocket.cpp.o: ../socket/TcpChatSocket.h
 

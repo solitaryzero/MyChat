@@ -6,6 +6,7 @@ set(CMAKE_DEPENDS_LANGUAGES
 set(CMAKE_DEPENDS_CHECK_CXX
   "/home/solitaryzero/Documents/MyChat/MyChat/server/server.cpp" "/home/solitaryzero/Documents/MyChat/MyChat/build/CMakeFiles/Server.dir/server/server.cpp.o"
   "/home/solitaryzero/Documents/MyChat/MyChat/server/serverTest.cpp" "/home/solitaryzero/Documents/MyChat/MyChat/build/CMakeFiles/Server.dir/server/serverTest.cpp.o"
+  "/home/solitaryzero/Documents/MyChat/MyChat/socket/TcpChatSocket.cpp" "/home/solitaryzero/Documents/MyChat/MyChat/build/CMakeFiles/Server.dir/socket/TcpChatSocket.cpp.o"
   )
 set(CMAKE_CXX_COMPILER_ID "GNU")
 

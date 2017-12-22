@@ -4,6 +4,11 @@
 CMakeFiles/Server.dir/server/server.cpp.o
  /home/solitaryzero/Documents/MyChat/MyChat/server/server.cpp
  /home/solitaryzero/Documents/MyChat/MyChat/server/server.h
+ /home/solitaryzero/Documents/MyChat/MyChat/socket/TcpChatSocket.h
 CMakeFiles/Server.dir/server/serverTest.cpp.o
  /home/solitaryzero/Documents/MyChat/MyChat/server/server.h
  /home/solitaryzero/Documents/MyChat/MyChat/server/serverTest.cpp
+ /home/solitaryzero/Documents/MyChat/MyChat/socket/TcpChatSocket.h
+CMakeFiles/Server.dir/socket/TcpChatSocket.cpp.o
+ /home/solitaryzero/Documents/MyChat/MyChat/socket/TcpChatSocket.cpp
+ /home/solitaryzero/Documents/MyChat/MyChat/socket/TcpChatSocket.h

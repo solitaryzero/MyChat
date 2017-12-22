@@ -3,7 +3,12 @@
 
 CMakeFiles/Server.dir/server/server.cpp.o: ../server/server.cpp
 CMakeFiles/Server.dir/server/server.cpp.o: ../server/server.h
+CMakeFiles/Server.dir/server/server.cpp.o: ../socket/TcpChatSocket.h
 
 CMakeFiles/Server.dir/server/serverTest.cpp.o: ../server/server.h
 CMakeFiles/Server.dir/server/serverTest.cpp.o: ../server/serverTest.cpp
+CMakeFiles/Server.dir/server/serverTest.cpp.o: ../socket/TcpChatSocket.h
+
+CMakeFiles/Server.dir/socket/TcpChatSocket.cpp.o: ../socket/TcpChatSocket.cpp
+CMakeFiles/Server.dir/socket/TcpChatSocket.cpp.o: ../socket/TcpChatSocket.h
 

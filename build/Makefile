@@ -244,6 +244,36 @@ server/serverTest.cpp.s:
 	$(MAKE) -f CMakeFiles/Server.dir/build.make CMakeFiles/Server.dir/server/serverTest.cpp.s
 .PHONY : server/serverTest.cpp.s
 
+socket/TcpChatSocket.o: socket/TcpChatSocket.cpp.o
+
+.PHONY : socket/TcpChatSocket.o
+
+# target to build an object file
+socket/TcpChatSocket.cpp.o:
+	$(MAKE) -f CMakeFiles/Client.dir/build.make CMakeFiles/Client.dir/socket/TcpChatSocket.cpp.o
+	$(MAKE) -f CMakeFiles/Server.dir/build.make CMakeFiles/Server.dir/socket/TcpChatSocket.cpp.o
+.PHONY : socket/TcpChatSocket.cpp.o
+
+socket/TcpChatSocket.i: socket/TcpChatSocket.cpp.i
+
+.PHONY : socket/TcpChatSocket.i
+
+# target to preprocess a source file
+socket/TcpChatSocket.cpp.i:
+	$(MAKE) -f CMakeFiles/Client.dir/build.make CMakeFiles/Client.dir/socket/TcpChatSocket.cpp.i
+	$(MAKE) -f CMakeFiles/Server.dir/build.make CMakeFiles/Server.dir/socket/TcpChatSocket.cpp.i
+.PHONY : socket/TcpChatSocket.cpp.i
+
+socket/TcpChatSocket.s: socket/TcpChatSocket.cpp.s
+
+.PHONY : socket/TcpChatSocket.s
+
+# target to generate assembly for a file
+socket/TcpChatSocket.cpp.s:
+	$(MAKE) -f CMakeFiles/Client.dir/build.make CMakeFiles/Client.dir/socket/TcpChatSocket.cpp.s
+	$(MAKE) -f CMakeFiles/Server.dir/build.make CMakeFiles/Server.dir/socket/TcpChatSocket.cpp.s
+.PHONY : socket/TcpChatSocket.cpp.s
+
 # Help Target
 help:
 	@echo "The following are some of the valid targets for this Makefile:"
@@ -266,6 +296,9 @@ help:
 	@echo "... server/serverTest.o"
 	@echo "... server/serverTest.i"
 	@echo "... server/serverTest.s"
+	@echo "... socket/TcpChatSocket.o"
+	@echo "... socket/TcpChatSocket.i"
+	@echo "... socket/TcpChatSocket.s"
 .PHONY : help
 
 

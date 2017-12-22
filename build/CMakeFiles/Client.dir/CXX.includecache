@@ -7,6 +7,10 @@
 #IncludeRegexTransform: 
 
 /home/solitaryzero/Documents/MyChat/MyChat/client/client.cpp
+client.h
+/home/solitaryzero/Documents/MyChat/MyChat/client/client.h
+
+/home/solitaryzero/Documents/MyChat/MyChat/client/client.h
 iostream
 -
 sys/types.h
@@ -25,10 +29,10 @@ memory.h
 -
 string
 -
-client.h
-/home/solitaryzero/Documents/MyChat/MyChat/client/client.h
-
-/home/solitaryzero/Documents/MyChat/MyChat/client/client.h
+vector
+-
+../socket/TcpChatSocket.h
+/home/solitaryzero/Documents/MyChat/MyChat/socket/TcpChatSocket.h
 
 /home/solitaryzero/Documents/MyChat/MyChat/client/clientTest.cpp
 iostream
@@ -37,4 +41,32 @@ cstdlib
 -
 client.h
 /home/solitaryzero/Documents/MyChat/MyChat/client/client.h
+
+/home/solitaryzero/Documents/MyChat/MyChat/socket/TcpChatSocket.cpp
+TcpChatSocket.h
+/home/solitaryzero/Documents/MyChat/MyChat/socket/TcpChatSocket.h
+
+/home/solitaryzero/Documents/MyChat/MyChat/socket/TcpChatSocket.h
+iostream
+-
+sys/types.h
+-
+sys/socket.h
+-
+netinet/in.h
+-
+arpa/inet.h
+-
+stdio.h
+-
+unistd.h
+-
+memory.h
+-
+string
+-
+string.h
+-
+vector
+-
 
