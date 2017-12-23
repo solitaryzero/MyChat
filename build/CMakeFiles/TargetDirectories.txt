@@ -1,4 +1,0 @@
-/home/solitaryzero/Documents/MyChat/MyChat/build/CMakeFiles/rebuild_cache.dir
-/home/solitaryzero/Documents/MyChat/MyChat/build/CMakeFiles/Client.dir
-/home/solitaryzero/Documents/MyChat/MyChat/build/CMakeFiles/edit_cache.dir
-/home/solitaryzero/Documents/MyChat/MyChat/build/CMakeFiles/Server.dir

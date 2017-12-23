@@ -1,1 +1,0 @@
-/usr/bin/c++      CMakeFiles/MyChat.dir/socket/ChatSocketTest.cpp.o CMakeFiles/MyChat.dir/socket/TcpChatSocket.cpp.o  -o MyChat -rdynamic 
