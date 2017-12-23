@@ -11,7 +11,9 @@
 #include <memory.h>
 #include <string>
 #include <vector>
+
 #include "../socket/TcpChatSocket.h"
+#include "../common.h"
 
 using namespace std;
 

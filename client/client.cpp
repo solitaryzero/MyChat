@@ -10,7 +10,7 @@ int Client::startClient(){
     memset(&serverSockAddr,0,sizeof(serverSockAddr));
     serverSockAddr.sin_family = AF_INET;
     serverSockAddr.sin_addr.s_addr = inet_addr("127.0.0.1");
-    serverSockAddr.sin_port = htons(8003);
+    serverSockAddr.sin_port = htons(SERVER_PORT);
 
     if ((socketfd = socket(PF_INET,SOCK_STREAM,0)) < 0){
         perror("socket create error");
@@ -26,7 +26,7 @@ int Client::startClient(){
     TcpChatSocket serverSock(socketfd);
     serverSock.initSocket();
 
-    binData inData;
+    BinData inData;
     inData = serverSock.recvMsg();//接收服务器端信息  
     printf("%s\n",inData.data()); //打印服务器端信息  
     fflush(stdout);

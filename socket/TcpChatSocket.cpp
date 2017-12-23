@@ -15,7 +15,7 @@ int TcpChatSocket::initSocket(){
 }
 
 int TcpChatSocket::sendMsg(string s){
-    binData dataOut;
+    BinData dataOut;
     dataOut.resize(s.size()+1);
     char* pDst = &dataOut[0];
     memcpy(pDst,s.data(),s.size());
@@ -28,7 +28,7 @@ int TcpChatSocket::sendMsg(string s){
 }
 
 int TcpChatSocket::sendMsg(void* p, int len){
-    binData dataOut;
+    BinData dataOut;
     dataOut.resize(len);
     char* pDst = &dataOut[0];
     memcpy(pDst,p,len);
@@ -39,7 +39,7 @@ int TcpChatSocket::sendMsg(void* p, int len){
     return 0;
 }
 
-int TcpChatSocket::sendMsg(binData dataOut){
+int TcpChatSocket::sendMsg(BinData dataOut){
     if (write(socketfd,dataOut.data(),dataOut.size()) < 0){
         perror("send error");
         return 1;
@@ -47,11 +47,11 @@ int TcpChatSocket::sendMsg(binData dataOut){
     return 0;
 }
 
-binData TcpChatSocket::recvMsg(){
+BinData TcpChatSocket::recvMsg(){
     int byteLength;
     char buf[BUFSIZE];
     byteLength = read(socketfd,buf,BUFSIZE);
-    binData res;
+    BinData res;
     if (byteLength < 0){
         perror("receive error");
         res.resize(0);
@@ -61,4 +61,9 @@ binData TcpChatSocket::recvMsg(){
     res.resize(byteLength);
     memcpy(res.data(),buf,byteLength);
     return res;
+}
+
+int TcpChatSocket::shutDownSocket(){
+    shutdown(socketfd,2);
+    return 0;
 }

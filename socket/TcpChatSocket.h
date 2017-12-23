@@ -15,19 +15,20 @@
 
 using namespace std;
 
-typedef vector<char> binData;
+typedef vector<char> BinData;
 
 class TcpChatSocket{
-private:
-    int socketfd;
-
 public:
     TcpChatSocket(int sfd);
+
+    int socketfd;
+
     int initSocket();
     int sendMsg(string s);
     int sendMsg(void* p, int len);
-    int sendMsg(binData dataOut);
-    binData recvMsg();
+    int sendMsg(BinData dataOut);
+    BinData recvMsg();
+    int shutDownSocket();
 };
 
 #endif

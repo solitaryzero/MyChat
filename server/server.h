@@ -11,13 +11,25 @@
 #include <memory.h>
 #include <string>
 #include <vector>
+#include <thread>
+#include <queue>
+#include <map>
+
 #include "../socket/TcpChatSocket.h"
+#include "../common.h"
 
 using namespace std;
 
 class Server{
+private:
+    TcpChatSocket* serverSock;
+    queue<function<void()>> tasks;
+    void catchClientSocket(TcpChatSocket* clientSock);
+
 public:
     int startServer();
+    TcpChatSocket* genServerSocket();
+    TcpChatSocket* waitForSocket();
 };
 
 #endif
