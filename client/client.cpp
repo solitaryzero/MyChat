@@ -1,11 +1,47 @@
 #include "client.h"
 
-#define BUFSIZE 100
+void Client::tryRegister(){
+    char buf[BUFSIZE];
+    MsgHeader header;
+
+    printf("Enter your name: \n");
+    scanf("%s",buf);  
+    header.msgType = MSG_TYPE_REGISTER_USERNAME;
+    header.length = strlen(buf)+1;
+    buf[strlen(buf)] = '\0';
+    serverSock->sendMsg(&header, sizeof(MsgHeader));
+    serverSock->sendMsg(buf,strlen(buf)+1);
+
+    printf("Enter your password: \n");
+    scanf("%s",buf);  
+    header.msgType = MSG_TYPE_REGISTER_PASSWORD;
+    header.length = strlen(buf)+1;
+    buf[strlen(buf)] = '\0';
+    serverSock->sendMsg(&header, sizeof(MsgHeader));
+    serverSock->sendMsg(buf,strlen(buf)+1);
+
+    inData = serverSock->recvMsg();
+    printf("length:%d\n",inData.size());
+    printf("received:%s\n",inData.data());  
+    fflush(stdout);
+}
+
+void Client::sendMsg(){
+    MsgHeader header;
+
+    header.msgType = MSG_TYPE_STRINGMSG;
+    header.length = strlen(buf)+1;
+    buf[strlen(buf)] = '\0';
+    serverSock->sendMsg(buf,strlen(buf)+1);
+    inData = serverSock->recvMsg();
+    printf("length:%d\n",inData.size());
+    printf("received:%s\n",inData.data());  
+    fflush(stdout);
+}
 
 int Client::startClient(){
     int socketfd;
     int byteLength;
-    char buf[BUFSIZE];
     struct sockaddr_in serverSockAddr;
     memset(&serverSockAddr,0,sizeof(serverSockAddr));
     serverSockAddr.sin_family = AF_INET;
@@ -23,11 +59,10 @@ int Client::startClient(){
         return 1;  
     }  
     printf("connected to server\n");  
-    TcpChatSocket serverSock(socketfd);
-    serverSock.initSocket();
+    serverSock = new TcpChatSocket(socketfd);
+    serverSock->initSocket();
 
-    BinData inData;
-    inData = serverSock.recvMsg();//接收服务器端信息  
+    inData = serverSock->recvMsg();//接收服务器端信息  
     printf("%s\n",inData.data()); //打印服务器端信息  
     fflush(stdout);
       
@@ -36,17 +71,15 @@ int Client::startClient(){
     {  
         printf("Enter string to send:\n");  
         scanf("%s",buf);  
-        if (!strcmp(buf,"quit")){
+        if (strcmp(buf,"quit") == 0){
             break;  
+        } else if (strcmp(buf,"register") == 0){
+            tryRegister();
+        } else {
+            sendMsg();
         }
-        buf[strlen(buf)] = '\0';
-        serverSock.sendMsg(buf,strlen(buf)+1);
-        inData = serverSock.recvMsg();
-        printf("length:%d\n",inData.size());
-        printf("received:%s\n",inData.data());  
-        fflush(stdout);
     }  
     
-    shutdown(socketfd,2);
+    serverSock->shutDownSocket();
     return 0;
 }

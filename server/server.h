@@ -17,6 +17,7 @@
 
 #include "../socket/TcpChatSocket.h"
 #include "../common.h"
+#include "serverDatabase.h"
 
 using namespace std;
 
@@ -24,6 +25,8 @@ class Server{
 private:
     TcpChatSocket* serverSock;
     queue<function<void()>> tasks;
+    map<string,BinData> msgBuffer;
+    ServerDatabase db; 
     void catchClientSocket(TcpChatSocket* clientSock);
 
 public:

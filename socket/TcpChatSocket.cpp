@@ -4,6 +4,11 @@
 
 using namespace std;
 
+string TcpChatSocket::binDataToString(BinData input){
+    string s = input.data();
+    return s;
+}
+
 TcpChatSocket::TcpChatSocket(int sfd){
     socketfd = sfd;
 }
@@ -51,6 +56,24 @@ BinData TcpChatSocket::recvMsg(){
     int byteLength;
     char buf[BUFSIZE];
     byteLength = read(socketfd,buf,BUFSIZE);
+    BinData res;
+    if (byteLength < 0){
+        perror("receive error");
+        res.resize(0);
+        return res;
+    }
+
+    res.resize(byteLength);
+    memcpy(res.data(),buf,byteLength);
+    return res;
+}
+
+BinData TcpChatSocket::recvMsg(int length){
+    int byteLength;
+    char buf[length];
+    printf("here1 %d\n",length);
+    byteLength = read(socketfd,buf,length);
+    printf("here2\n");
     BinData res;
     if (byteLength < 0){
         perror("receive error");

@@ -3,69 +3,6 @@
 #define BUFSIZE 100
 #define MAX_USERS 10
 
-void Server::catchClientSocket(TcpChatSocket* clientSock){
-    string s = "hello world!";
-    clientSock->sendMsg(s);//发送欢迎信息
-
-    thread sockLoopThread = thread([=](){
-        //接收客户端的数据并将其发送给客户端
-        BinData inData;
-        while (1){  
-            inData = clientSock->recvMsg();
-            if (inData.size() == 0) break;
-            printf("==============\n");
-            printf("from socket %d:\n", clientSock->socketfd);
-            printf("%s\n",inData.data());
-            printf("%d\n",inData.size());
-            fflush(stdout);  
-            if(clientSock->sendMsg(inData.data(),inData.size()) > 0)  
-            {  
-                perror("write error");  
-                return 1;  
-            }  
-        } 
-    });
-    sockLoopThread.detach();
-}
-
-//启动服务器
-int Server::startServer(){
-    while (!tasks.empty()){     //清空事件队列
-        tasks.pop();
-    }
-
-    this->serverSock = genServerSocket();   //生成服务器的socket
-
-    /*
-    thread taskThread = thread([=](){       //事件处理队列线程
-        while(true){
-            if (!tasks.empty()){
-                function<void()> func = tasks.front();
-                tasks.pop();
-                func();
-            }
-        }
-    });
-    */
-
-    thread waitForSocketThread = thread([=](){
-        while(true){
-            TcpChatSocket* clientSock;
-            clientSock = waitForSocket();
-            if (clientSock != nullptr) {
-                catchClientSocket(clientSock);
-            }
-        }
-    });
-    
-    waitForSocketThread.join();
-
-    serverSock->shutDownSocket();
-    delete(serverSock);
-
-    return 0;
-}
-
 //生成服务器对应的socket
 TcpChatSocket* Server::genServerSocket(){
     int serverSocketfd;
@@ -111,4 +48,96 @@ TcpChatSocket* Server::waitForSocket(){
     printf("accept client %s\n",inet_ntoa(clientSockAddr.sin_addr));  
 
     return clientSock;
+}
+
+void Server::catchClientSocket(TcpChatSocket* clientSock){
+    string s = "hello world!";
+    clientSock->sendMsg(s);//发送欢迎信息
+
+    thread sockLoopThread = thread([=](){
+        //接收客户端的数据
+        BinData inData;
+        while (1){  
+            inData = clientSock->recvMsg(sizeof(MsgHeader));
+            if (inData.size() == 0) break;
+
+            //stub
+            int msgType = ((MsgHeader*)(inData.data()))->msgType;
+            int length = ((MsgHeader*)(inData.data()))->length;
+            printf("%d %d\n",msgType,length);
+
+            if (msgType == MSG_TYPE_REGISTER_USERNAME){
+                inData = clientSock->recvMsg(length);
+                string name = TcpChatSocket::binDataToString(inData);
+                inData = clientSock->recvMsg(sizeof(MsgHeader));
+                length = ((MsgHeader*)(inData.data()))->length;
+                inData = clientSock->recvMsg(length);
+                string password = TcpChatSocket::binDataToString(inData);
+                int res = db.createUser(TcpChatSocket::binDataToString(inData),"passwordtest");
+                if (res == 1){
+                    string s = "user already exists!\n";
+                    clientSock->sendMsg(s);
+                } else {
+                    string s = "success!\n";
+                    clientSock->sendMsg(s);
+                    db.save();
+                }
+            } else if (msgType == MSG_TYPE_STRINGMSG){
+                inData = clientSock->recvMsg(length);
+                printf("==============\n");
+                printf("from socket %d:\n", clientSock->socketfd);
+                printf("%s\n",inData.data());
+                printf("%d\n",inData.size());
+                fflush(stdout);  
+                if(clientSock->sendMsg(inData.data(),inData.size()) > 0)  
+                {  
+                    perror("write error");  
+                    return 1;  
+                }  
+            }
+        } 
+        printf("socket %d closed\n", clientSock->socketfd);
+    });
+    sockLoopThread.detach();
+}
+
+//启动服务器
+int Server::startServer(){
+    while (!tasks.empty()){     //清空事件队列
+        tasks.pop();
+    }
+
+    //初始化数据库
+    db.init();
+
+    this->serverSock = genServerSocket();   //生成服务器的socket
+
+    thread taskThread = thread([=](){       //事件处理队列线程
+        while(true){
+            if (!tasks.empty()){
+                function<void()> func = tasks.front();
+                tasks.pop();
+                func();
+            }
+        }
+    });
+
+    thread waitForSocketThread = thread([=](){
+        while(true){
+            TcpChatSocket* clientSock;
+            clientSock = waitForSocket();
+            if (clientSock != nullptr) {
+                tasks.push([=](){
+                    catchClientSocket(clientSock);
+                });
+            }
+        }
+    });
+    
+    waitForSocketThread.join();
+
+    serverSock->shutDownSocket();
+    delete(serverSock);
+
+    return 0;
 }

@@ -23,11 +23,14 @@ public:
 
     int socketfd;
 
+    static string binDataToString(BinData input);
+
     int initSocket();
     int sendMsg(string s);
     int sendMsg(void* p, int len);
     int sendMsg(BinData dataOut);
     BinData recvMsg();
+    BinData recvMsg(int length);
     int shutDownSocket();
 };
 

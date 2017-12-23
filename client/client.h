@@ -15,9 +15,18 @@
 #include "../socket/TcpChatSocket.h"
 #include "../common.h"
 
+#define BUFSIZE 100
+
 using namespace std;
 
 class Client{
+private:
+    TcpChatSocket* serverSock;
+    void tryRegister();
+    void sendMsg();
+    char buf[BUFSIZE];
+    BinData inData;
+
 public:
     int startClient();
 };
