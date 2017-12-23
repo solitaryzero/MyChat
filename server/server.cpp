@@ -57,37 +57,42 @@ void Server::catchClientSocket(TcpChatSocket* clientSock){
     thread sockLoopThread = thread([=](){
         //接收客户端的数据
         BinData inData;
+        string err;
         while (1){  
-            inData = clientSock->recvMsg(sizeof(MsgHeader));
+            inData = clientSock->recvMsg();
             if (inData.size() == 0) break;
 
-            //stub
-            int msgType = ((MsgHeader*)(inData.data()))->msgType;
-            int length = ((MsgHeader*)(inData.data()))->length;
-            printf("%d %d\n",msgType,length);
+            Json msg = Json::parse(inData.data(),err);
+            int msgType = msg["Type"].int_value();
 
-            if (msgType == MSG_TYPE_REGISTER_USERNAME){
-                inData = clientSock->recvMsg(length);
-                string name = TcpChatSocket::binDataToString(inData);
-                inData = clientSock->recvMsg(sizeof(MsgHeader));
-                length = ((MsgHeader*)(inData.data()))->length;
-                inData = clientSock->recvMsg(length);
-                string password = TcpChatSocket::binDataToString(inData);
-                int res = db.createUser(TcpChatSocket::binDataToString(inData),"passwordtest");
+            if (msgType == MSG_TYPE_REGISTER){
+                string name = msg["Name"].string_value();
+                string password = msg["Password"].string_value();
+                int res = db.createUser(name,password);
                 if (res == 1){
                     string s = "user already exists!\n";
                     clientSock->sendMsg(s);
                 } else {
-                    string s = "success!\n";
+                    string s = "register success!\n";
                     clientSock->sendMsg(s);
                     db.save();
                 }
+            } else if (msgType == MSG_TYPE_LOGIN){
+                string name = msg["Name"].string_value();
+                string password = msg["Password"].string_value();
+                int res = db.checkUser(name,password);
+                if (res == 1){
+                    string s = "login failed!\n";
+                    clientSock->sendMsg(s);
+                } else {
+                    string s = "login success!\n";
+                    clientSock->sendMsg(s);
+                }
             } else if (msgType == MSG_TYPE_STRINGMSG){
-                inData = clientSock->recvMsg(length);
                 printf("==============\n");
                 printf("from socket %d:\n", clientSock->socketfd);
-                printf("%s\n",inData.data());
-                printf("%d\n",inData.size());
+                printf("%s\n",msg["Message"].string_value().c_str());
+                printf("%d\n",msg["Message"].string_value().size());
                 fflush(stdout);  
                 if(clientSock->sendMsg(inData.data(),inData.size()) > 0)  
                 {  

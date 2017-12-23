@@ -21,6 +21,7 @@ public:
     void init();
     void save();
     int createUser(string name, string password);
+    int checkUser(string name, string password);
 };
 
 #endif

@@ -30,7 +30,6 @@ public:
     int sendMsg(void* p, int len);
     int sendMsg(BinData dataOut);
     BinData recvMsg();
-    BinData recvMsg(int length);
     int shutDownSocket();
 };
 

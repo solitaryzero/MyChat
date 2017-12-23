@@ -1,24 +1,54 @@
 #include "client.h"
 
 void Client::tryRegister(){
-    char buf[BUFSIZE];
-    MsgHeader header;
+    string name,password;
+    printf("Trying to register...\n");
 
-    printf("Enter your name: \n");
+    printf("Enter your name: ");
     scanf("%s",buf);  
-    header.msgType = MSG_TYPE_REGISTER_USERNAME;
-    header.length = strlen(buf)+1;
     buf[strlen(buf)] = '\0';
-    serverSock->sendMsg(&header, sizeof(MsgHeader));
-    serverSock->sendMsg(buf,strlen(buf)+1);
+    name.assign(buf);
 
-    printf("Enter your password: \n");
+    printf("Enter your password: ");
     scanf("%s",buf);  
-    header.msgType = MSG_TYPE_REGISTER_PASSWORD;
-    header.length = strlen(buf)+1;
     buf[strlen(buf)] = '\0';
-    serverSock->sendMsg(&header, sizeof(MsgHeader));
-    serverSock->sendMsg(buf,strlen(buf)+1);
+    password.assign(buf);
+
+    Json res = Json::object{
+        {"Type",MSG_TYPE_REGISTER},
+        {"Name",name},
+        {"Password",password}
+    };
+
+    serverSock->sendMsg(res.dump());
+
+    inData = serverSock->recvMsg();
+    printf("length:%d\n",inData.size());
+    printf("received:%s\n",inData.data());  
+    fflush(stdout);
+}
+
+void Client::tryLogin(){
+    string name,password;
+    printf("Trying to login...\n");
+
+    printf("Enter your name: ");
+    scanf("%s",buf);  
+    buf[strlen(buf)] = '\0';
+    name.assign(buf);
+
+    printf("Enter your password: ");
+    scanf("%s",buf);  
+    buf[strlen(buf)] = '\0';
+    password.assign(buf);
+
+    Json res = Json::object{
+        {"Type",MSG_TYPE_LOGIN},
+        {"Name",name},
+        {"Password",password}
+    };
+
+    serverSock->sendMsg(res.dump());
 
     inData = serverSock->recvMsg();
     printf("length:%d\n",inData.size());
@@ -27,12 +57,15 @@ void Client::tryRegister(){
 }
 
 void Client::sendMsg(){
-    MsgHeader header;
-
-    header.msgType = MSG_TYPE_STRINGMSG;
-    header.length = strlen(buf)+1;
     buf[strlen(buf)] = '\0';
-    serverSock->sendMsg(buf,strlen(buf)+1);
+    string msg(buf);
+
+    Json res = Json::object{
+        {"Type",MSG_TYPE_STRINGMSG},
+        {"Message",msg}
+    };
+
+    serverSock->sendMsg(res.dump());
     inData = serverSock->recvMsg();
     printf("length:%d\n",inData.size());
     printf("received:%s\n",inData.data());  
@@ -75,6 +108,8 @@ int Client::startClient(){
             break;  
         } else if (strcmp(buf,"register") == 0){
             tryRegister();
+        } else if (strcmp(buf,"login") == 0){
+            tryLogin();
         } else {
             sendMsg();
         }

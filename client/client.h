@@ -13,16 +13,19 @@
 #include <vector>
 
 #include "../socket/TcpChatSocket.h"
+#include <json11.hpp>
 #include "../common.h"
 
 #define BUFSIZE 100
 
 using namespace std;
+using namespace json11;
 
 class Client{
 private:
     TcpChatSocket* serverSock;
     void tryRegister();
+    void tryLogin();
     void sendMsg();
     char buf[BUFSIZE];
     BinData inData;

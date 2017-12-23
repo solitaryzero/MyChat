@@ -20,6 +20,9 @@ int TcpChatSocket::initSocket(){
 }
 
 int TcpChatSocket::sendMsg(string s){
+    int len = s.size()+1;
+    write(socketfd,&len,sizeof(int));
+
     BinData dataOut;
     dataOut.resize(s.size()+1);
     char* pDst = &dataOut[0];
@@ -33,6 +36,8 @@ int TcpChatSocket::sendMsg(string s){
 }
 
 int TcpChatSocket::sendMsg(void* p, int len){
+    write(socketfd,&len,sizeof(int));
+
     BinData dataOut;
     dataOut.resize(len);
     char* pDst = &dataOut[0];
@@ -45,6 +50,8 @@ int TcpChatSocket::sendMsg(void* p, int len){
 }
 
 int TcpChatSocket::sendMsg(BinData dataOut){
+    int len = dataOut.size();
+    write(socketfd,&len,sizeof(int));
     if (write(socketfd,dataOut.data(),dataOut.size()) < 0){
         perror("send error");
         return 1;
@@ -53,36 +60,27 @@ int TcpChatSocket::sendMsg(BinData dataOut){
 }
 
 BinData TcpChatSocket::recvMsg(){
-    int byteLength;
-    char buf[BUFSIZE];
-    byteLength = read(socketfd,buf,BUFSIZE);
     BinData res;
-    if (byteLength < 0){
-        perror("receive error");
+
+    int byteLength;
+    char lengthbuf[4];
+    byteLength = recv(socketfd,lengthbuf,sizeof(int),MSG_WAITALL);
+    if (byteLength <= 0){
         res.resize(0);
         return res;
     }
+    int length = *((int*)lengthbuf);    //确认实际数据长度
 
-    res.resize(byteLength);
-    memcpy(res.data(),buf,byteLength);
-    return res;
-}
-
-BinData TcpChatSocket::recvMsg(int length){
-    int byteLength;
     char buf[length];
-    printf("here1 %d\n",length);
-    byteLength = read(socketfd,buf,length);
-    printf("here2\n");
-    BinData res;
-    if (byteLength < 0){
+    byteLength = recv(socketfd,buf,length,MSG_WAITALL);
+    if (byteLength <= 0){
         perror("receive error");
         res.resize(0);
         return res;
     }
 
     res.resize(byteLength);
-    memcpy(res.data(),buf,byteLength);
+    memcpy(res.data(),buf,byteLength);  //接收实际数据
     return res;
 }
 

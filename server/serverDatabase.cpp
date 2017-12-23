@@ -26,7 +26,6 @@ void ServerDatabase::init(){
 void ServerDatabase::save(){
     ofstream out(DB_FILENAME);
     int len = userData.size();
-    printf("%d\n",len);
     out << len << endl;
     for (auto i=userData.begin();i!=userData.end();++i){
         out << i->first << endl;
@@ -42,5 +41,18 @@ int ServerDatabase::createUser(string name, string password){
     }
 
     userData[name] = password;
+    return 0;
+}
+
+int ServerDatabase::checkUser(string name, string password){
+    auto iter = userData.find(name);
+    if (iter == userData.end()){
+        return 1;
+    }
+
+    if (userData[name] != password){
+        return 1;
+    }
+    
     return 0;
 }

@@ -16,10 +16,12 @@
 #include <map>
 
 #include "../socket/TcpChatSocket.h"
+#include <json11.hpp>
 #include "../common.h"
 #include "serverDatabase.h"
 
 using namespace std;
+using namespace json11;
 
 class Server{
 private:
