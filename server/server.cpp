@@ -22,14 +22,33 @@ int Server::sendMessageTo(string name, string content){
     return 0;
 }
 
+int Server::sendFileTo(string name, string content){
+    if (!db.doesUserExist(name)){
+        return USER_NOT_FOUND_ERROR;
+    }
+
+    auto iter = clientFileSocketMap.find(name);
+    if ((iter == clientFileSocketMap.end()) || (clientFileSocketMap[name] == nullptr)){
+        auto iter1 = fileBuffer.find(name);
+        if (iter1 == fileBuffer.end()){
+            vector<string> newVec;
+            fileBuffer[name] = newVec;
+        }
+        fileBuffer[name].push_back(content);
+    } else {
+        clientFileSocketMap[name]->sendMsg(content);
+    }
+    return 0;
+}
+
 //生成服务器对应的socket
-TcpChatSocket* Server::genServerSocket(){
+TcpChatSocket* Server::genServerSocket(int port){
     int serverSocketfd;
     struct sockaddr_in serverSockAddr;
     memset(&serverSockAddr,0,sizeof(serverSockAddr));
     serverSockAddr.sin_family = AF_INET;
     serverSockAddr.sin_addr.s_addr = INADDR_ANY;
-    serverSockAddr.sin_port = htons(SERVER_PORT);
+    serverSockAddr.sin_port = htons(port);
 
     if ((serverSocketfd = socket(PF_INET,SOCK_STREAM,0)) < 0){
         perror("socket create error");
@@ -70,10 +89,25 @@ TcpChatSocket* Server::waitForSocket(){
     return clientSock;
 }
 
-void Server::catchClientSocket(TcpChatSocket* clientSock){
-    string s = "hello world!";
-    clientSock->sendMsg(s);//发送欢迎信息
+//等待下一个用户文件socket
+TcpChatSocket* Server::waitForFileSocket(){
+    int clientSocketfd;
+    struct sockaddr_in clientSockAddr;
+    socklen_t sinSize = sizeof(struct sockaddr_in);
+    if ((clientSocketfd = accept(fileSock->socketfd, (struct sockaddr*)&clientSockAddr, &sinSize)) < 0){
+        perror("accept error");
+        return nullptr;
+    }
 
+    TcpChatSocket* clientSock = new TcpChatSocket(clientSocketfd,nextFileSocketid);
+    nextFileSocketid++;
+    clientSock->initSocket();
+    printf("accept file client %s\n",inet_ntoa(clientSockAddr.sin_addr));  
+
+    return clientSock;
+}
+
+void Server::catchClientSocket(TcpChatSocket* clientSock){
     threadMap[clientSock->socketid] = thread([=](){
         //接收客户端的数据
         BinData inData;
@@ -308,6 +342,114 @@ void Server::catchClientSocket(TcpChatSocket* clientSock){
     });
 }
 
+void Server::catchClientFileSocket(TcpChatSocket* clientSock){
+    fileThreadMap[clientSock->socketid] = thread([=](){
+        //接收客户端的文件数据
+        BinData inData;
+        while (1){  
+            inData = clientSock->recvMsg();
+            if (inData.size() == 0) break;
+
+            taskLock.lock();            //加入处理信息事件
+            tasks.push([=](){
+                string err;
+                Json msg = Json::parse(inData.data(),err);
+                int msgType = msg["Type"].int_value();
+                cout << "file socket msgType " << msgType << endl;
+
+                switch(msgType){
+                    case MSG_TYPE_LOGIN:{
+                        string name = msg["Name"].string_value();
+                        string password = msg["Password"].string_value();
+                        int res = db.checkUser(name,password);
+                        if (res == 0){
+                            clientSock->name = name;
+                            clientFileSocketMap[name] = clientSock;
+                        }
+                        break;
+                    } 
+
+                    case MSG_TYPE_FILE_HEADER:{
+                        string filename = msg["FileName"].string_value();
+                        int size = msg["Size"].int_value();
+                        string dest = msg["Dest"].string_value();
+
+                        Json fileHeader = Json::object{
+                            {"Type",MSG_TYPE_FILE_HEADER},
+                            {"Author",clientSock->name},
+                            {"FileName",filename},
+                            {"Size",size}
+                        };
+                        sendFileTo(dest,fileHeader.dump());
+                        break;
+                    }
+
+                    case MSG_TYPE_FILE_BODY:{
+                        string filename = msg["FileName"].string_value();
+                        int size = msg["Size"].int_value();
+                        string dest = msg["Dest"].string_value();
+                        string binMsg = msg["Content"].string_value();
+
+                        Json fileBody = Json::object{
+                            {"Type",MSG_TYPE_FILE_BODY},
+                            {"Author",clientSock->name},
+                            {"FileName",filename},
+                            {"Size",size},
+                            {"Content",binMsg}
+                        };
+                        sendFileTo(dest,fileBody.dump());
+                        break;
+                    }
+
+                    case MSG_TYPE_FILE_END:{
+                        string filename = msg["FileName"].string_value();
+                        string dest = msg["Dest"].string_value();
+                        int size = msg["Size"].int_value();
+                        Json fileEnd = Json::object{
+                            {"Type",MSG_TYPE_FILE_END},
+                            {"FileName",filename},
+                            {"Size",size}
+                        };
+                        sendFileTo(dest,fileEnd.dump());
+                        break;
+                    }
+
+                    case MSG_TYPE_GET_BUFFERED_FILE:{
+                        vector<string> bufferedFile = fileBuffer[clientSock->name];
+                        fileBuffer[clientSock->name].clear();
+                        for (int i=0;i<bufferedFile.size();i++){
+                            clientSock->sendMsg(bufferedFile[i]);
+                        }
+                        break;
+                    }
+
+                    default:
+                    {
+                        perror("unknown command");
+                        break;
+                    }
+                }
+            });
+            taskLock.unlock();
+
+        } 
+
+        taskLock.lock();        //用户下线
+        printf("file socket No.%d closed\n", clientSock->socketid);
+        tasks.push([=](){
+            db.setOnlineState(clientSock->name,false);
+            fileThreadMap[clientSock->socketid].join();
+            if (clientSock->name != NO_NAME){
+                clientFileSocketMap.erase(clientSock->name);
+            }
+            fileThreadMap.erase(clientSock->socketid);
+            clientSock->shutDownSocket();
+            delete clientSock;
+        });
+        taskLock.unlock();
+    });
+}
+
 //启动服务器
 int Server::startServer(){
     //清空事件队列
@@ -318,8 +460,10 @@ int Server::startServer(){
     db.init();    //初始化数据库
 
     nextSocketid = 0;
+    nextFileSocketid = 0;
 
-    this->serverSock = genServerSocket();   //生成服务器的socket
+    this->serverSock = genServerSocket(SERVER_PORT);   //生成服务器的socket
+    this->fileSock = genServerSocket(FILE_SERVER_PORT);//生成文件服务器socket
 
     thread taskThread = thread([=](){       //事件处理队列线程
         while(true){
@@ -333,7 +477,7 @@ int Server::startServer(){
         }
     });
 
-    thread waitForSocketThread = thread([=](){
+    thread waitForSocketThread = thread([=](){          //聊天连接处理线程
         while(true){
             TcpChatSocket* clientSock;
             clientSock = waitForSocket();
@@ -346,11 +490,28 @@ int Server::startServer(){
             }
         }
     });
+
+    thread waitForFileSocketThread = thread([=](){          //文件连接处理线程
+        while(true){
+            TcpChatSocket* clientSock;
+            clientSock = waitForFileSocket();
+            if (clientSock != nullptr) {
+                taskLock.lock();
+                tasks.push([=](){
+                    catchClientFileSocket(clientSock);
+                });
+                taskLock.unlock();
+            }
+        }
+    });
     
     waitForSocketThread.join();
+    waitForFileSocketThread.join();
 
     serverSock->shutDownSocket();
+    fileSock->shutDownSocket();
     delete(serverSock);
+    delete(fileSock);
 
     return 0;
 }

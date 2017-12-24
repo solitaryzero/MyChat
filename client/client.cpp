@@ -1,5 +1,35 @@
 #include "client.h"
 
+TcpChatSocket* Client::connectServer(int port){
+    int socketfd;
+    int byteLength;
+    struct sockaddr_in serverSockAddr;
+    TcpChatSocket* newSock;
+    memset(&serverSockAddr,0,sizeof(serverSockAddr));
+    serverSockAddr.sin_family = AF_INET;
+    serverSockAddr.sin_addr.s_addr = inet_addr("127.0.0.1");
+    serverSockAddr.sin_port = htons(port);
+
+    if ((socketfd = socket(PF_INET,SOCK_STREAM,0)) < 0){
+        perror("socket create error");
+        return nullptr;
+    }   
+      
+    /*将套接字绑定到服务器的网络地址上*/  
+    if (connect(socketfd, (struct sockaddr *)&serverSockAddr, sizeof(struct sockaddr)) < 0){  
+        perror("connect error");  
+        return nullptr;  
+    }  
+    if (port == SERVER_PORT){
+        printf("connected to server\n");  
+    } else if (port == FILE_SERVER_PORT){
+        printf("connected to file server\n");  
+    }
+    newSock = new TcpChatSocket(socketfd);
+    newSock->initSocket();
+    return newSock;
+}
+
 void Client::tryRegister(){
     string name,password;
     printf("Trying to register...\n");
@@ -43,6 +73,7 @@ void Client::tryLogin(){
         {"Password",password}
     };
 
+    serverFileSock->sendMsg(res.dump());    
     serverSock->sendMsg(res.dump());
 }
 
@@ -137,31 +168,74 @@ void Client::sendMsg(){
     serverSock->sendMsg(res.dump());
 }
 
+void Client::trySendFile(){
+    string name; 
+    int size;
+
+    if (chatPartner == NO_NAME){
+        cout << "You are not chatting with anyone." << endl;
+        return;
+    }
+
+    cout << "Enter file path and name: ";
+    
+    cin.getline(buf,BUFSIZE);
+    buf[strlen(buf)] = '\0';
+    name.assign(buf);
+
+    FILE* _file = fopen(buf,"rb");
+    if (!_file) return;
+    fseek(_file,0,SEEK_END);
+    size = ftell(_file);    //确定文件大小
+    fclose(_file); 
+    
+    Json fileHeader = Json::object{
+        {"Type",MSG_TYPE_FILE_HEADER},
+        {"FileName",name},
+        {"Size",size},
+        {"Dest",chatPartner}
+    };
+    serverFileSock->sendMsg(fileHeader.dump());
+
+    _file = fopen(buf,"rb");
+    int count = 0;
+    while (count < size){
+        int seg = fread(fileBuf,1,FILEBUFSIZE,_file);
+        string binString;
+        binString.assign(fileBuf,seg);
+        Json fileBody = Json::object{
+            {"Type",MSG_TYPE_FILE_BODY},
+            {"FileName",name},
+            {"Size",seg},
+            {"Content",binString},
+            {"Dest",chatPartner}
+        };
+        serverFileSock->sendMsg(fileBody.dump());
+        count += seg;
+    }
+
+    Json fileEnd = Json::object{
+        {"Type",MSG_TYPE_FILE_END},
+        {"FileName",name},
+        {"Size",size},
+        {"Dest",chatPartner}
+    };
+    serverFileSock->sendMsg(fileEnd.dump());
+}
+
+void Client::tryRecvFile(){
+    Json res = Json::object{
+        {"Type",MSG_TYPE_GET_BUFFERED_FILE}
+    };
+    serverFileSock->sendMsg(res.dump());
+}
+
 int Client::startClient(){
-    int socketfd;
-    int byteLength;
-    struct sockaddr_in serverSockAddr;
-    memset(&serverSockAddr,0,sizeof(serverSockAddr));
-    serverSockAddr.sin_family = AF_INET;
-    serverSockAddr.sin_addr.s_addr = inet_addr("127.0.0.1");
-    serverSockAddr.sin_port = htons(SERVER_PORT);
-
     chatPartner = NO_NAME;
+    this->serverSock = connectServer(SERVER_PORT);
+    this->serverFileSock = connectServer(FILE_SERVER_PORT);
 
-    if ((socketfd = socket(PF_INET,SOCK_STREAM,0)) < 0){
-        perror("socket create error");
-        return 1;
-    }   
-      
-    /*将套接字绑定到服务器的网络地址上*/  
-    if (connect(socketfd, (struct sockaddr *)&serverSockAddr, sizeof(struct sockaddr)) < 0){  
-        perror("connect error");  
-        return 1;  
-    }  
-    printf("connected to server\n");  
-    serverSock = new TcpChatSocket(socketfd);
-    serverSock->initSocket();
-
+    //处理服务器端信息
     thread recvThread = thread([=](){
         bool flag = true;
         while(true){
@@ -284,7 +358,72 @@ int Client::startClient(){
         }
     });
       
-    /*循环的发送接收信息并打印接收信息--recv返回接收到的字节数，send返回发送的字节数*/  
+    //接收文件服务端口信息
+    thread recvFileThread = thread([=](){
+        bool flag = true;
+        while(true){
+            inData = serverFileSock->recvMsg();//接收服务器端信息  
+            if (inData.size() == 0) break;
+
+            string err;
+            Json msg = Json::parse(inData.data(),err);
+            int msgType = msg["Type"].int_value();
+
+            switch(msgType){
+                case MSG_TYPE_ERRORMSG:{
+                    cout << msg["Content"].string_value() << endl;
+                    break;
+                } 
+
+                case MSG_TYPE_INFOMSG:{
+                    cout << msg["Content"].string_value() << endl;
+                    break;
+                } 
+
+                case MSG_TYPE_FILE_HEADER:{
+                    string filename = msg["FileName"].string_value();
+                    string author = msg["Author"].string_value();
+                    int size = msg["Size"].int_value();
+                    int count = 0; 
+                    //string fullFilename = "recvFile/"+filename;
+                    string fullFilename = "copy_"+filename;
+                    currentFile = fopen(fullFilename.c_str(),"wb");
+                    cout << "Received file " << filename << " from " << author << "." << endl;
+                    break;
+                } 
+
+                case MSG_TYPE_FILE_BODY:{
+                    int size = msg["Size"].int_value();
+                    string binMsg = msg["Content"].string_value();
+                    fwrite(binMsg.c_str(),1,size,currentFile);
+                    break;
+                } 
+
+                case MSG_TYPE_FILE_END:{
+                    string filename = msg["FileName"].string_value();
+                    cout << "File " + filename << " successfully received." << endl;
+                    fflush(currentFile);
+                    fclose(currentFile);
+                    break;
+                } 
+
+                case MSG_TYPE_END_CONNECTION:{
+                    flag = false;
+                    break;
+                }
+
+                default:
+                {
+                    break;
+                }
+            }
+        
+            fflush(stdout);
+            if (!flag) break;
+        }
+    });
+
+    //根据指令进行相应操作
     thread sendThread = thread([=](){
         while(true)  
         {  
@@ -297,6 +436,10 @@ int Client::startClient(){
                 tryLogin();
             } else if (strcmp(buf,"chat") == 0){
                 tryChat();
+            } else if (strcmp(buf,"senfile") == 0){
+                trySendFile();
+            } else if (strcmp(buf,"recvfile") == 0){
+                tryRecvFile();
             } else if (strcmp(buf,"search") == 0){
                 tryListUsers();
             } else if (strcmp(buf,"ls") == 0){
@@ -315,7 +458,11 @@ int Client::startClient(){
 
     sendThread.join();
     serverSock->shutDownSocket();
+    serverFileSock->shutDownSocket();
     recvThread.join();
+    recvFileThread.join();
+    delete serverSock;
+    delete serverFileSock;
 
     return 0;
 }
