@@ -56,3 +56,12 @@ int ServerDatabase::checkUser(string name, string password){
     
     return 0;
 }
+
+bool ServerDatabase::doesUserExist(string name){
+    auto iter = userData.find(name);
+    if (iter == userData.end()){
+        return false;
+    }
+    
+    return true;
+}

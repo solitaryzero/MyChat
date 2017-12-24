@@ -11,6 +11,14 @@ string TcpChatSocket::binDataToString(BinData input){
 
 TcpChatSocket::TcpChatSocket(int sfd){
     socketfd = sfd;
+    socketid = -1;
+    name = NO_NAME;
+}
+
+TcpChatSocket::TcpChatSocket(int sfd, int sid){
+    socketfd = sfd;
+    socketid = sid;
+    name = NO_NAME;
 }
 
 int TcpChatSocket::initSocket(){

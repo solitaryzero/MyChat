@@ -14,6 +14,7 @@
 #include <thread>
 #include <queue>
 #include <map>
+#include <mutex>
 
 #include "../socket/TcpChatSocket.h"
 #include <json11.hpp>
@@ -27,14 +28,20 @@ class Server{
 private:
     TcpChatSocket* serverSock;
     queue<function<void()>> tasks;
-    map<string,BinData> msgBuffer;
+    map<int,thread> threadMap;
+    map<string,TcpChatSocket*> clientSocketMap;
+    map<string,vector<string>> msgBuffer;
     ServerDatabase db; 
+    mutex taskLock;
+    int nextSocketid;
+
+    int sendMessageTo(string name, string content);
+    TcpChatSocket* genServerSocket();
+    TcpChatSocket* waitForSocket();
     void catchClientSocket(TcpChatSocket* clientSock);
 
 public:
     int startServer();
-    TcpChatSocket* genServerSocket();
-    TcpChatSocket* waitForSocket();
 };
 
 #endif

@@ -11,6 +11,7 @@
 #include <memory.h>
 #include <string>
 #include <vector>
+#include <thread>
 
 #include "../socket/TcpChatSocket.h"
 #include <json11.hpp>
@@ -26,9 +27,11 @@ private:
     TcpChatSocket* serverSock;
     void tryRegister();
     void tryLogin();
+    void tryChat();
     void sendMsg();
     char buf[BUFSIZE];
     BinData inData;
+    string chatPartner;
 
 public:
     int startClient();

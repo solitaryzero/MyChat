@@ -22,6 +22,7 @@ public:
     void save();
     int createUser(string name, string password);
     int checkUser(string name, string password);
+    bool doesUserExist(string name);
 };
 
 #endif

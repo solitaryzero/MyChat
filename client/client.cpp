@@ -5,12 +5,12 @@ void Client::tryRegister(){
     printf("Trying to register...\n");
 
     printf("Enter your name: ");
-    scanf("%s",buf);  
+    cin.getline(buf,BUFSIZE);
     buf[strlen(buf)] = '\0';
     name.assign(buf);
 
     printf("Enter your password: ");
-    scanf("%s",buf);  
+    cin.getline(buf,BUFSIZE); 
     buf[strlen(buf)] = '\0';
     password.assign(buf);
 
@@ -21,11 +21,6 @@ void Client::tryRegister(){
     };
 
     serverSock->sendMsg(res.dump());
-
-    inData = serverSock->recvMsg();
-    printf("length:%d\n",inData.size());
-    printf("received:%s\n",inData.data());  
-    fflush(stdout);
 }
 
 void Client::tryLogin(){
@@ -33,12 +28,12 @@ void Client::tryLogin(){
     printf("Trying to login...\n");
 
     printf("Enter your name: ");
-    scanf("%s",buf);  
+    cin.getline(buf,BUFSIZE); 
     buf[strlen(buf)] = '\0';
     name.assign(buf);
 
     printf("Enter your password: ");
-    scanf("%s",buf);  
+    cin.getline(buf,BUFSIZE); 
     buf[strlen(buf)] = '\0';
     password.assign(buf);
 
@@ -49,11 +44,17 @@ void Client::tryLogin(){
     };
 
     serverSock->sendMsg(res.dump());
+}
 
-    inData = serverSock->recvMsg();
-    printf("length:%d\n",inData.size());
-    printf("received:%s\n",inData.data());  
-    fflush(stdout);
+void Client::tryChat(){
+    string name;
+
+    printf("You want to chat with: ");
+    cin.getline(buf,BUFSIZE);
+    buf[strlen(buf)] = '\0';
+    name.assign(buf);
+
+    chatPartner = name;
 }
 
 void Client::sendMsg(){
@@ -62,14 +63,11 @@ void Client::sendMsg(){
 
     Json res = Json::object{
         {"Type",MSG_TYPE_STRINGMSG},
-        {"Message",msg}
+        {"Name",chatPartner},
+        {"Content",msg}
     };
 
     serverSock->sendMsg(res.dump());
-    inData = serverSock->recvMsg();
-    printf("length:%d\n",inData.size());
-    printf("received:%s\n",inData.data());  
-    fflush(stdout);
 }
 
 int Client::startClient(){
@@ -80,6 +78,8 @@ int Client::startClient(){
     serverSockAddr.sin_family = AF_INET;
     serverSockAddr.sin_addr.s_addr = inet_addr("127.0.0.1");
     serverSockAddr.sin_port = htons(SERVER_PORT);
+
+    chatPartner = NO_NAME;
 
     if ((socketfd = socket(PF_INET,SOCK_STREAM,0)) < 0){
         perror("socket create error");
@@ -95,26 +95,37 @@ int Client::startClient(){
     serverSock = new TcpChatSocket(socketfd);
     serverSock->initSocket();
 
-    inData = serverSock->recvMsg();//接收服务器端信息  
-    printf("%s\n",inData.data()); //打印服务器端信息  
-    fflush(stdout);
+    thread recvThread = thread([=](){
+        while(true){
+            inData = serverSock->recvMsg();//接收服务器端信息  
+            if (inData.size() == 0) break;
+            printf("%s\n",inData.data()); //打印服务器端信息  
+            fflush(stdout);
+        }
+    });
       
     /*循环的发送接收信息并打印接收信息--recv返回接收到的字节数，send返回发送的字节数*/  
-    while(1)  
-    {  
-        printf("Enter string to send:\n");  
-        scanf("%s",buf);  
-        if (strcmp(buf,"quit") == 0){
-            break;  
-        } else if (strcmp(buf,"register") == 0){
-            tryRegister();
-        } else if (strcmp(buf,"login") == 0){
-            tryLogin();
-        } else {
-            sendMsg();
-        }
-    }  
-    
+    thread sendThread = thread([=](){
+        while(true)  
+        {  
+            cin.getline(buf,BUFSIZE);
+            if (strcmp(buf,"quit") == 0){
+                break;  
+            } else if (strcmp(buf,"register") == 0){
+                tryRegister();
+            } else if (strcmp(buf,"login") == 0){
+                tryLogin();
+            } else if (strcmp(buf,"chat") == 0){
+                tryChat();
+            } else {
+                sendMsg();
+            }
+        }  
+    });
+
+    recvThread.join();
+    sendThread.join();
+
     serverSock->shutDownSocket();
     return 0;
 }

@@ -12,6 +12,7 @@
 #include <string>
 #include <string.h>
 #include <vector>
+#include "../common.h"
 
 using namespace std;
 
@@ -20,8 +21,11 @@ typedef vector<char> BinData;
 class TcpChatSocket{
 public:
     TcpChatSocket(int sfd);
+    TcpChatSocket(int sfd, int sid);
 
     int socketfd;
+    int socketid;
+    string name;
 
     static string binDataToString(BinData input);
 
