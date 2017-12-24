@@ -28,8 +28,12 @@ private:
     void tryRegister();
     void tryLogin();
     void tryChat();
+    void tryExitChat();
+    void tryListUsers();
+    void tryListFriends();
     void sendMsg();
     char buf[BUFSIZE];
+    map<string,vector<string>> msgBuffer;
     BinData inData;
     string chatPartner;
 

@@ -9,7 +9,7 @@ int Server::sendMessageTo(string name, string content){
     }
 
     auto iter = clientSocketMap.find(name);
-    if (iter == clientSocketMap.end()){
+    if ((iter == clientSocketMap.end()) || (clientSocketMap[name] == nullptr)){
         auto iter1 = msgBuffer.find(name);
         if (iter1 == msgBuffer.end()){
             vector<string> newVec;
@@ -94,11 +94,17 @@ void Server::catchClientSocket(TcpChatSocket* clientSock){
                         string password = msg["Password"].string_value();
                         int res = db.createUser(name,password);
                         if (res == 1){
-                            string s = "user already exists!";
-                            clientSock->sendMsg(s);
+                            Json cont = Json::object{
+                                {"Type", MSG_TYPE_ERRORMSG},
+                                {"Content", USER_ALREADY_EXIST_ERROR_STRING}
+                            };
+                            clientSock->sendMsg(cont.dump());
                         } else {
-                            string s = "register success!";
-                            clientSock->sendMsg(s);
+                            Json cont = Json::object{
+                                {"Type", MSG_TYPE_INFOMSG},
+                                {"Content", REGISTER_SUCCESS_MSG}
+                            };
+                            clientSock->sendMsg(cont.dump());
                             db.save();
                         }
                         break;
@@ -109,24 +115,80 @@ void Server::catchClientSocket(TcpChatSocket* clientSock){
                         string password = msg["Password"].string_value();
                         int res = db.checkUser(name,password);
                         if (res == 1){
-                            string s = "login failed!";
-                            clientSock->sendMsg(s);
+                            Json cont = Json::object{
+                                {"Type", MSG_TYPE_ERRORMSG},
+                                {"Content", LOGIN_FAILED_MSG}
+                            };
+                            clientSock->sendMsg(cont.dump());
                         } else {
-                            string s = "login success!";
+                            Json cont = Json::object{
+                                {"Type", MSG_TYPE_LOGIN_SUCCESS_MSG},
+                                {"Content", LOGIN_SUCCESS_MSG}
+                            };
+                            clientSock->sendMsg(cont.dump());
                             clientSock->name = name;
                             clientSocketMap[name] = clientSock;
-                            clientSock->sendMsg(s);
+                            db.setOnlineState(name,true);
                         }
                         break;
                     } 
 
                     case MSG_TYPE_STRINGMSG:{
+                        if (clientSock->name == NO_NAME){
+                            Json cont = Json::object{
+                                {"Type",MSG_TYPE_ERRORMSG},
+                                {"Content",NOT_LOGINED_ERROR_STRING}
+                            };
+                            clientSock->sendMsg(cont.dump());
+                            break;
+                        }
+
                         string name = msg["Name"].string_value();
                         string content = msg["Content"].string_value();
-                        int res = sendMessageTo(name,content);
+                        Json cont = Json::object{
+                            {"Type",MSG_TYPE_STRINGMSG},
+                            {"Author",clientSock->name},
+                            {"Content",content}
+                        };
+                        int res = sendMessageTo(name,cont.dump());
                         if (res == USER_NOT_FOUND_ERROR){
-                            clientSock->sendMsg(USER_NOT_FOUND_ERROR_STRING);
+                            cont = Json::object{
+                                {"Type",MSG_TYPE_ERRORMSG},
+                                {"Content",USER_NOT_FOUND_ERROR_STRING}
+                            };
+                            clientSock->sendMsg(cont.dump());
                         }
+                        break;
+                    }
+
+                    case MSG_TYPE_LISTUSERS:{
+                        vector<string> res = db.findAllUsers();
+                        int len = res.size();
+                        Json::array users;
+                        for (int i=0;i<res.size();i++){
+                            Json tmp = Json::object{
+                                {"Name",res[i]},
+                                {"isOnline",db.getOnlineState(res[i])}
+                            };
+                            users.push_back(tmp);
+                        }
+                        Json cont = Json::object{
+                            {"Type",MSG_TYPE_LISTUSERS},
+                            {"Size",len},
+                            {"Content",users}
+                        };
+                        clientSock->sendMsg(cont.dump());
+                        break;
+                    }
+
+                    case MSG_TYPE_GET_BUFFERED_STRINGMSG:{
+                        vector<string> bufferedMsg = msgBuffer[clientSock->name];
+                        msgBuffer[clientSock->name].clear();
+                        Json cont = Json::object{
+                            {"Type",MSG_TYPE_GET_BUFFERED_STRINGMSG},
+                            {"Content",bufferedMsg}
+                        };
+                        clientSock->sendMsg(cont.dump());
                         break;
                     }
 
@@ -144,7 +206,11 @@ void Server::catchClientSocket(TcpChatSocket* clientSock){
         taskLock.lock();        //广播下线的用户
         printf("socket No.%d closed\n", clientSock->socketid);
         tasks.push([=](){
+            db.setOnlineState(clientSock->name,false);
             threadMap[clientSock->socketid].join();
+            if (clientSock->name != NO_NAME){
+                clientSocketMap.erase(clientSock->name);
+            }
             threadMap.erase(clientSock->socketid);
             delete clientSock;
         });

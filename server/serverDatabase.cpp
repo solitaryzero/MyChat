@@ -19,6 +19,7 @@ void ServerDatabase::init(){
         in >> name;
         in >> password;
         userData[name] = password;
+        isOnline[name] = false;
     }
     in.close();
 }
@@ -41,6 +42,7 @@ int ServerDatabase::createUser(string name, string password){
     }
 
     userData[name] = password;
+    isOnline[name] = false;
     return 0;
 }
 
@@ -57,6 +59,14 @@ int ServerDatabase::checkUser(string name, string password){
     return 0;
 }
 
+vector<string> ServerDatabase::findAllUsers(){
+    vector<string> res;
+    for (auto i=userData.begin();i!=userData.end();++i){
+        res.push_back(i->first);
+    }
+    return res;
+}
+
 bool ServerDatabase::doesUserExist(string name){
     auto iter = userData.find(name);
     if (iter == userData.end()){
@@ -64,4 +74,12 @@ bool ServerDatabase::doesUserExist(string name){
     }
     
     return true;
+}
+
+void ServerDatabase::setOnlineState(string name, bool flag){
+    isOnline[name] = flag;
+}
+
+bool ServerDatabase::getOnlineState(string name){
+    return(isOnline[name]);
 }
