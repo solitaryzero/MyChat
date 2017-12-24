@@ -385,8 +385,11 @@ int Client::startClient(){
                     string author = msg["Author"].string_value();
                     int size = msg["Size"].int_value();
                     int count = 0; 
-                    //string fullFilename = "recvFile/"+filename;
-                    string fullFilename = "copy_"+filename;
+
+                    //需要修改为本机对应路径
+                    string fullFilename = "/home/solitaryzero/Downloads/"+filename;
+                    
+                    cout << fullFilename.c_str() << endl;
                     currentFile = fopen(fullFilename.c_str(),"wb");
                     cout << "Received file " << filename << " from " << author << "." << endl;
                     break;
