@@ -96,6 +96,29 @@ void Client::tryListFriends(){
     serverSock->sendMsg(res.dump());
 }
 
+void Client::tryAddFriend(){
+    string name; 
+
+    cout << "Enter new friend's name: ";
+    cin.getline(buf,BUFSIZE);
+    buf[strlen(buf)] = '\0';
+    name.assign(buf);
+    Json res = Json::object{
+        {"Type",MSG_TYPE_ADD_FRIEND},
+        {"Name",name}
+    };
+
+    serverSock->sendMsg(res.dump());
+}
+
+void Client::tryProfile(){ 
+    Json res = Json::object{
+        {"Type",MSG_TYPE_PROFILE}
+    };
+
+    serverSock->sendMsg(res.dump());
+}
+
 void Client::sendMsg(){
     buf[strlen(buf)] = '\0';
     string msg(buf);
@@ -140,6 +163,7 @@ int Client::startClient(){
     serverSock->initSocket();
 
     thread recvThread = thread([=](){
+        bool flag = true;
         while(true){
             inData = serverSock->recvMsg();//接收服务器端信息  
             if (inData.size() == 0) break;
@@ -191,9 +215,9 @@ int Client::startClient(){
                     for (int i=0;i<msg["Size"].int_value();i++){
                         cout << msg["Content"][i]["Name"].string_value() << " ";
                         if (msg["Content"][i]["isOnline"].bool_value()){
-                            cout << "Online" << endl;
+                            cout << "(Online)" << endl;
                         } else {
-                            cout << "Offline" << endl;
+                            cout << "(Offline)" << endl;
                         }
                     }
                     break;
@@ -205,9 +229,9 @@ int Client::startClient(){
                     for (int i=0;i<msg["Size"].int_value();i++){
                         cout << msg["Content"][i]["Name"].string_value() << " ";
                         if (msg["Content"][i]["isOnline"].bool_value()){
-                            cout << "Online" << endl;
+                            cout << "(Online)" << endl;
                         } else {
-                            cout << "Offline" << endl;
+                            cout << "(Offline)" << endl;
                         }
                     }
                     break;
@@ -234,6 +258,19 @@ int Client::startClient(){
                             msgBuffer[author].push_back(content);
                         }
                     }
+                    break;
+                }
+
+                case MSG_TYPE_PROFILE:{
+                    cout << "Your profile: " << endl;
+                    cout << "Username: " << msg["Username"].string_value() << endl;
+                    cout << "Password: " << msg["Password"].string_value() << endl;
+                    break;
+                }
+
+                case MSG_TYPE_END_CONNECTION:{
+                    flag = false;
+                    break;
                 }
 
                 default:
@@ -241,8 +278,9 @@ int Client::startClient(){
                     break;
                 }
             }
-
+        
             fflush(stdout);
+            if (!flag) break;
         }
     });
       
@@ -250,7 +288,6 @@ int Client::startClient(){
     thread sendThread = thread([=](){
         while(true)  
         {  
-            cout << ">> ";
             cin.getline(buf,BUFSIZE);
             if (strcmp(buf,"quit") == 0){
                 break;  
@@ -262,17 +299,23 @@ int Client::startClient(){
                 tryChat();
             } else if (strcmp(buf,"search") == 0){
                 tryListUsers();
+            } else if (strcmp(buf,"ls") == 0){
+                tryListFriends();
+            } else if (strcmp(buf,"add") == 0){
+                tryAddFriend();
             } else if (strcmp(buf,"exit") == 0){
                 tryExitChat();
+            } else if (strcmp(buf,"profile") == 0){
+                tryProfile();
             } else {
                 sendMsg();
             }
         }  
     });
 
-    recvThread.join();
     sendThread.join();
-
     serverSock->shutDownSocket();
+    recvThread.join();
+
     return 0;
 }

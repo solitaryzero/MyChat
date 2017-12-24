@@ -133,8 +133,8 @@ void Server::catchClientSocket(TcpChatSocket* clientSock){
                         break;
                     } 
 
-                    case MSG_TYPE_STRINGMSG:{
-                        if (clientSock->name == NO_NAME){
+                    case MSG_TYPE_STRINGMSG:{  
+                        if (clientSock->name == NO_NAME){   //是否登录
                             Json cont = Json::object{
                                 {"Type",MSG_TYPE_ERRORMSG},
                                 {"Content",NOT_LOGINED_ERROR_STRING}
@@ -145,6 +145,16 @@ void Server::catchClientSocket(TcpChatSocket* clientSock){
 
                         string name = msg["Name"].string_value();
                         string content = msg["Content"].string_value();
+
+                        if (!db.isFriend(clientSock->name,name)){   //是否为好友
+                            Json cont = Json::object{
+                                {"Type",MSG_TYPE_ERRORMSG},
+                                {"Content",name+USER_NOT_FRIEND_ERROR_STRING}
+                            };
+                            clientSock->sendMsg(cont.dump());
+                            break;
+                        }
+
                         Json cont = Json::object{
                             {"Type",MSG_TYPE_STRINGMSG},
                             {"Author",clientSock->name},
@@ -181,6 +191,65 @@ void Server::catchClientSocket(TcpChatSocket* clientSock){
                         break;
                     }
 
+                    case MSG_TYPE_LISTFRIENDS:{
+                        if (clientSock->name == NO_NAME){
+                            Json cont = Json::object{
+                                {"Type",MSG_TYPE_ERRORMSG},
+                                {"Content",NOT_LOGINED_ERROR_STRING}
+                            };
+                            clientSock->sendMsg(cont.dump());
+                            break;
+                        }
+
+                        vector<string> res = db.findAllFriends(clientSock->name);
+                        int len = res.size();
+                        Json::array users;
+                        for (int i=0;i<res.size();i++){
+                            Json tmp = Json::object{
+                                {"Name",res[i]},
+                                {"isOnline",db.getOnlineState(res[i])}
+                            };
+                            users.push_back(tmp);
+                        }
+                        Json cont = Json::object{
+                            {"Type",MSG_TYPE_LISTFRIENDS},
+                            {"Size",len},
+                            {"Content",users}
+                        };
+                        clientSock->sendMsg(cont.dump());
+                        break;
+                    }
+
+                    case MSG_TYPE_ADD_FRIEND:{
+                        if (clientSock->name == NO_NAME){
+                            Json cont = Json::object{
+                                {"Type",MSG_TYPE_ERRORMSG},
+                                {"Content",NOT_LOGINED_ERROR_STRING}
+                            };
+                            clientSock->sendMsg(cont.dump());
+                            break;
+                        }
+
+                        string friendName = msg["Name"].string_value();
+                        if (!db.doesUserExist(friendName)){
+                            Json cont = Json::object{
+                                {"Type",MSG_TYPE_ERRORMSG},
+                                {"Content",USER_NOT_FOUND_ERROR_STRING}
+                            };
+                            clientSock->sendMsg(cont.dump());
+                        } else {
+                            db.addFriendship(clientSock->name,friendName);
+                            Json cont = Json::object{
+                                {"Type",MSG_TYPE_INFOMSG},
+                                {"Content",ADD_FRIEND_SUCCESS_MSG+friendName}
+                            };
+                            clientSock->sendMsg(cont.dump());
+                            db.save();
+                        }
+                        
+                        break;
+                    }
+
                     case MSG_TYPE_GET_BUFFERED_STRINGMSG:{
                         vector<string> bufferedMsg = msgBuffer[clientSock->name];
                         msgBuffer[clientSock->name].clear();
@@ -188,6 +257,26 @@ void Server::catchClientSocket(TcpChatSocket* clientSock){
                             {"Type",MSG_TYPE_GET_BUFFERED_STRINGMSG},
                             {"Content",bufferedMsg}
                         };
+                        clientSock->sendMsg(cont.dump());
+                        break;
+                    }
+                    
+                    case MSG_TYPE_PROFILE:{
+                        if (clientSock->name == NO_NAME){
+                            Json cont = Json::object{
+                                {"Type",MSG_TYPE_ERRORMSG},
+                                {"Content",NOT_LOGINED_ERROR_STRING}
+                            };
+                            clientSock->sendMsg(cont.dump());
+                            break;
+                        }
+
+                        Json cont = Json::object{
+                            {"Type",MSG_TYPE_PROFILE},
+                            {"Username",clientSock->name},
+                            {"Password",db.userData[clientSock->name]}
+                        };
+                        cout << cont.dump() << endl;
                         clientSock->sendMsg(cont.dump());
                         break;
                     }
@@ -203,7 +292,7 @@ void Server::catchClientSocket(TcpChatSocket* clientSock){
 
         } 
 
-        taskLock.lock();        //广播下线的用户
+        taskLock.lock();        //用户下线
         printf("socket No.%d closed\n", clientSock->socketid);
         tasks.push([=](){
             db.setOnlineState(clientSock->name,false);
@@ -212,11 +301,11 @@ void Server::catchClientSocket(TcpChatSocket* clientSock){
                 clientSocketMap.erase(clientSock->name);
             }
             threadMap.erase(clientSock->socketid);
+            clientSock->shutDownSocket();
             delete clientSock;
         });
         taskLock.unlock();
     });
-    
 }
 
 //启动服务器
@@ -249,9 +338,11 @@ int Server::startServer(){
             TcpChatSocket* clientSock;
             clientSock = waitForSocket();
             if (clientSock != nullptr) {
+                taskLock.lock();
                 tasks.push([=](){
                     catchClientSocket(clientSock);
                 });
+                taskLock.unlock();
             }
         }
     });

@@ -31,6 +31,8 @@ private:
     void tryExitChat();
     void tryListUsers();
     void tryListFriends();
+    void tryAddFriend();
+    void tryProfile();
     void sendMsg();
     char buf[BUFSIZE];
     map<string,vector<string>> msgBuffer;
