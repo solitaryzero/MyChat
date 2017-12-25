@@ -21,9 +21,9 @@ TcpChatSocket* Client::connectServer(int port){
         return nullptr;  
     }  
     if (port == SERVER_PORT){
-        printf("connected to server\n");  
+        printf(">> connected to server\n");  
     } else if (port == FILE_SERVER_PORT){
-        printf("connected to file server\n");  
+        printf(">> connected to file server\n");  
     }
     newSock = new TcpChatSocket(socketfd);
     newSock->initSocket();
@@ -32,14 +32,14 @@ TcpChatSocket* Client::connectServer(int port){
 
 void Client::tryRegister(){
     string name,password;
-    printf("Trying to register...\n");
+    printf(">> Trying to register...\n");
 
-    printf("Enter your name: ");
+    printf(">> Enter your name: ");
     cin.getline(buf,BUFSIZE);
     buf[strlen(buf)] = '\0';
     name.assign(buf);
 
-    printf("Enter your password: ");
+    printf(">> Enter your password: ");
     cin.getline(buf,BUFSIZE); 
     buf[strlen(buf)] = '\0';
     password.assign(buf);
@@ -55,14 +55,14 @@ void Client::tryRegister(){
 
 void Client::tryLogin(){
     string name,password;
-    printf("Trying to login...\n");
+    printf(">> Trying to login...\n");
 
-    printf("Enter your name: ");
+    printf(">> Enter your name: ");
     cin.getline(buf,BUFSIZE); 
     buf[strlen(buf)] = '\0';
     name.assign(buf);
 
-    printf("Enter your password: ");
+    printf(">> Enter your password: ");
     cin.getline(buf,BUFSIZE); 
     buf[strlen(buf)] = '\0';
     password.assign(buf);
@@ -80,13 +80,13 @@ void Client::tryLogin(){
 void Client::tryChat(){
     string name;
 
-    cout << "You want to chat with: ";
+    cout << ">> You want to chat with: ";
     cin.getline(buf,BUFSIZE);
     buf[strlen(buf)] = '\0';
     name.assign(buf);
 
     chatPartner = name;
-    cout << "You are now chatting with: " << name << endl;
+    cout << ">> You are now chatting with: " << name << endl;
 
     auto iter = msgBuffer.find(name);
     if (iter == msgBuffer.end()){
@@ -104,10 +104,10 @@ void Client::tryChat(){
 
 void Client::tryExitChat(){
     if (chatPartner == NO_NAME){
-        cout << "You are not chatting with others." << endl;
+        cout << ">> You are not chatting with others." << endl;
         return;
     }
-    cout << "exited chat with " << chatPartner << "." << endl;
+    cout << ">> exited chat with " << chatPartner << "." << endl;
     chatPartner = NO_NAME;
 }
 
@@ -130,7 +130,7 @@ void Client::tryListFriends(){
 void Client::tryAddFriend(){
     string name; 
 
-    cout << "Enter new friend's name: ";
+    cout << ">> Enter new friend's name: ";
     cin.getline(buf,BUFSIZE);
     buf[strlen(buf)] = '\0';
     name.assign(buf);
@@ -155,7 +155,7 @@ void Client::sendMsg(){
     string msg(buf);
 
     if (chatPartner == NO_NAME){
-        cout << "unknown command" << endl;
+        cout << ">> unknown command" << endl;
         return;
     }
 
@@ -173,11 +173,11 @@ void Client::trySendFile(){
     int size;
 
     if (chatPartner == NO_NAME){
-        cout << "You are not chatting with anyone." << endl;
+        cout << ">> You are not chatting with anyone." << endl;
         return;
     }
 
-    cout << "Enter file path and name: ";
+    cout << ">> Enter file name: ";
     
     cin.getline(buf,BUFSIZE);
     buf[strlen(buf)] = '\0';
@@ -248,17 +248,17 @@ int Client::startClient(){
 
             switch(msgType){
                 case MSG_TYPE_ERRORMSG:{
-                    cout << msg["Content"].string_value() << endl;
+                    cout << ">> " << msg["Content"].string_value() << endl;
                     break;
                 } 
 
                 case MSG_TYPE_INFOMSG:{
-                    cout << msg["Content"].string_value() << endl;
+                    cout << ">> " << msg["Content"].string_value() << endl;
                     break;
                 } 
 
                 case MSG_TYPE_LOGIN_SUCCESS_MSG:{
-                    cout << msg["Content"].string_value() << endl;
+                    cout << ">> " << msg["Content"].string_value() << endl;
                     Json res = Json::object{
                         {"Type",MSG_TYPE_GET_BUFFERED_STRINGMSG}
                     };
@@ -271,7 +271,7 @@ int Client::startClient(){
                     string content = msg["Content"].string_value();
 
                     if (author == chatPartner){
-                        cout << author << ": " << content << endl;
+                        cout << ">> " << author << ": " << content << endl;
                     } else {
                         auto iter = msgBuffer.find(author);
                         if (iter == msgBuffer.end()){
@@ -284,10 +284,10 @@ int Client::startClient(){
                 }
 
                 case MSG_TYPE_LISTUSERS:{
-                    cout << "All users: " << endl;
+                    cout << ">> " << "All users: " << endl;
 
                     for (int i=0;i<msg["Size"].int_value();i++){
-                        cout << msg["Content"][i]["Name"].string_value() << " ";
+                        cout << ">> " << msg["Content"][i]["Name"].string_value() << " ";
                         if (msg["Content"][i]["isOnline"].bool_value()){
                             cout << "(Online)" << endl;
                         } else {
@@ -298,10 +298,10 @@ int Client::startClient(){
                 }
 
                 case MSG_TYPE_LISTFRIENDS:{
-                    cout << "All friends: " << endl;
+                    cout << ">> " << "All friends: " << endl;
 
                     for (int i=0;i<msg["Size"].int_value();i++){
-                        cout << msg["Content"][i]["Name"].string_value() << " ";
+                        cout << ">> " << msg["Content"][i]["Name"].string_value() << " ";
                         if (msg["Content"][i]["isOnline"].bool_value()){
                             cout << "(Online)" << endl;
                         } else {
@@ -322,7 +322,7 @@ int Client::startClient(){
                         string content = tmp["Content"].string_value();
 
                         if (author == chatPartner){
-                            cout << author << ": " << content << endl;
+                            cout << ">> " << author << ": " << content << endl;
                         } else {
                             auto iter = msgBuffer.find(author);
                             if (iter == msgBuffer.end()){
@@ -336,9 +336,15 @@ int Client::startClient(){
                 }
 
                 case MSG_TYPE_PROFILE:{
-                    cout << "Your profile: " << endl;
-                    cout << "Username: " << msg["Username"].string_value() << endl;
-                    cout << "Password: " << msg["Password"].string_value() << endl;
+                    cout << ">> " << "Your profile: " << endl;
+                    cout << ">> " << "Username: " << msg["Username"].string_value() << endl;
+                    cout << ">> " << "Password: " << msg["Password"].string_value() << endl;
+                    if (chatPartner == NO_NAME){
+                        cout << ">> " << "Not chatting with anyone." << endl;
+                    } else {
+                        cout << ">> " << "Now chatting with: " << chatPartner << endl;
+                    }
+                    
                     break;
                 }
 
@@ -371,12 +377,12 @@ int Client::startClient(){
 
             switch(msgType){
                 case MSG_TYPE_ERRORMSG:{
-                    cout << msg["Content"].string_value() << endl;
+                    cout << ">> " << msg["Content"].string_value() << endl;
                     break;
                 } 
 
                 case MSG_TYPE_INFOMSG:{
-                    cout << msg["Content"].string_value() << endl;
+                    cout << ">> " << msg["Content"].string_value() << endl;
                     break;
                 } 
 
@@ -389,9 +395,8 @@ int Client::startClient(){
                     //需要修改为本机对应路径
                     string fullFilename = "/home/solitaryzero/Downloads/"+filename;
                     
-                    cout << fullFilename.c_str() << endl;
                     currentFile = fopen(fullFilename.c_str(),"wb");
-                    cout << "Received file " << filename << " from " << author << "." << endl;
+                    cout << ">> " << "Received file " << filename << " from " << author << "." << endl;
                     break;
                 } 
 
@@ -404,7 +409,7 @@ int Client::startClient(){
 
                 case MSG_TYPE_FILE_END:{
                     string filename = msg["FileName"].string_value();
-                    cout << "File " + filename << " successfully received." << endl;
+                    cout << ">> " << "File " + filename << " successfully received." << endl;
                     fflush(currentFile);
                     fclose(currentFile);
                     break;
